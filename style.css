@@ -1,0 +1,146 @@
+body {
+  font-family: sans-serif;
+  display: flex;
+  flex-direction: row;
+  margin: 20px;
+  background-color: #f4f4f4;
+  gap: 14px;
+}
+.chart-container {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  width: 50%;
+  max-width: 50%;
+  height: fit-content;
+}
+#controls {
+  margin-bottom: 15px;
+  padding: 10px;
+  background-color: #fff;
+  border-radius: 5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+  position: relative;
+}
+#controls label {
+  margin-right: 10px;
+}
+#metric-select,
+#reset-zoom-button {
+  padding: 5px 8px;
+  border-radius: 3px;
+  border: 1px solid #ccc;
+  margin-left: 5px;
+}
+#reset-zoom-button {
+  cursor: pointer;
+}
+#reset-zoom-button:hover {
+  background-color: #f0f0f0;
+}
+
+#map-container {
+  width: 100%;
+  border: 1px solid #ccc;
+  background-color: #fff;
+  overflow: hidden;
+}
+#world-map {
+  cursor: grab;
+}
+#world-map:active {
+  cursor: grabbing;
+}
+.country {
+  stroke: #fff;
+  stroke-width: 0.5px;
+  transition: fill 0.3s ease;
+}
+.country:hover {
+  stroke: #333;
+  stroke-width: 1.5px;
+  filter: brightness(0.9);
+}
+#tooltip {
+  position: absolute;
+  background-color: rgba(0, 0, 0, 0.85);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+  max-width: 280px;
+  z-index: 20;
+}
+.tooltip-metric {
+  font-weight: bold;
+}
+.tooltip-category {
+  font-style: italic;
+}
+
+.legend {
+  margin-top: 20px;
+  padding: 10px;
+  background-color: #fff;
+  border-radius: 5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  max-width: 350px;
+  z-index: 10;
+  position: relative;
+}
+.legend-title {
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+.legend-description {
+  font-size: 0.9em;
+  margin-bottom: 10px;
+  color: #555;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 5px;
+  font-size: 0.9em;
+}
+.legend-color-swatch {
+  width: 18px;
+  height: 18px;
+  margin-right: 8px;
+  border: 1px solid #ccc;
+  flex-shrink: 0;
+}
+#country-metrics-chart-container {
+  /* Renamed from stacked-bar-chart-container */
+  /* width: 100%; from .chart-container */
+  min-height: 400px; /* Ensure space even if empty */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.metrics-chart-title {
+  /* Renamed from bar-chart-title */
+  font-size: 1.2em;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 15px;
+}
+.axis-label {
+  font-size: 0.9em;
+  fill: #333;
+}
+.bar-value-label {
+  font-size: 0.8em;
+  fill: #333;
+  text-anchor: middle;
+}
+.chart-placeholder-text {
+  font-style: italic;
+  color: #777;
+  text-align: center;
+}

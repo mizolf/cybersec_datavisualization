@@ -6,110 +6,7 @@
     <title>Cyber Security Dashboard</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://unpkg.com/topojson@3"></script>
-    <style>
-        body {
-            font-family: sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin: 20px;
-            background-color: #f4f4f4;
-        }
-        .chart-container {
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 30px;
-            width: 90%;
-            max-width: 1000px;
-        }
-        #controls {
-            margin-bottom: 15px;
-            padding: 10px;
-            background-color: #fff;
-            border-radius: 5px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            z-index: 10; 
-            position: relative; 
-        }
-        #controls label { margin-right: 10px; }
-        #metric-select, #reset-zoom-button {
-            padding: 5px 8px; border-radius: 3px; border: 1px solid #ccc; margin-left: 5px;
-        }
-        #reset-zoom-button { cursor: pointer; }
-        #reset-zoom-button:hover { background-color: #f0f0f0; }
-
-        #map-container {
-            /* width: 100%; from .chart-container */
-            border: 1px solid #ccc;
-            background-color: #fff; /* Already white from chart-container */
-            overflow: hidden; 
-        }
-        #world-map { cursor: grab; }
-        #world-map:active { cursor: grabbing; }
-        .country {
-            stroke: #fff; stroke-width: 0.5px; transition: fill 0.3s ease;
-        }
-        .country:hover {
-            stroke: #333; stroke-width: 1.5px; filter: brightness(0.9);
-        }
-        #tooltip {
-            position: absolute; background-color: rgba(0, 0, 0, 0.85); color: white;
-            padding: 8px 12px; border-radius: 4px; font-size: 12px;
-            pointer-events: none; opacity: 0; transition: opacity 0.2s ease-in-out;
-            max-width: 280px; z-index: 20; 
-        }
-        .tooltip-metric { font-weight: bold; }
-        .tooltip-category { font-style: italic; }
-
-        .legend {
-            margin-top: 20px; padding: 10px; background-color: #fff;
-            border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            max-width: 350px; z-index: 10; position: relative;
-        }
-        .legend-title { font-weight: bold; margin-bottom: 5px; }
-        .legend-description { font-size: 0.9em; margin-bottom: 10px; color: #555; }
-        .legend-item { display: flex; align-items: center; margin-bottom: 5px; font-size: 0.9em; }
-        .legend-color-swatch {
-            width: 18px; height: 18px; margin-right: 8px;
-            border: 1px solid #ccc; flex-shrink: 0;
-        }
-
-        /* Styles for the new stacked bar chart */
-        #stacked-bar-chart-container {
-            /* width: 100%; from .chart-container */
-        }
-        .bar-chart-title {
-            font-size: 1.2em;
-            font-weight: bold;
-            text-align: center;
-            margin-bottom: 15px;
-        }
-        .stacked-bar-tooltip {
-            position: absolute;
-            text-align: center;
-            padding: 6px;
-            font: 12px sans-serif;
-            background: lightsteelblue;
-            border: 0px;
-            border-radius: 8px;
-            pointer-events: none;
-            opacity: 0;
-        }
-        .axis-label {
-            font-size: 0.9em;
-            fill: #333;
-        }
-        .chart-legend .legend-item { /* Specific for bar chart legend if needed */
-             margin: 0 10px;
-        }
-        .chart-legend {
-            display: flex;
-            justify-content: center;
-            margin-top: 10px;
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="chart-container">
@@ -139,10 +36,10 @@
     </div>
 
     <div class="chart-container">
-        <div id="stacked-bar-chart-container">
-            <svg id="stacked-bar-chart"></svg>
+        <div id="country-metrics-chart-container"> <!-- Renamed ID -->
+            <p class="chart-placeholder-text">Kliknite na državu na karti kako biste vidjeli njezine metrike.</p>
+            <svg id="country-metrics-chart" style="display: none;"></svg> <!-- Initially hidden -->
         </div>
-        <div class="stacked-bar-tooltip"></div>
     </div>
 
 
@@ -151,40 +48,40 @@
         const mapWidth = document.getElementById('map-container').clientWidth;
         const mapHeight = mapWidth * 0.6;
 
-        const mapSvg = d3.select("#world-map") // Renamed svg to mapSvg for clarity
+        const mapSvg = d3.select("#world-map") 
             .attr("viewBox", `0 0 ${mapWidth} ${mapHeight}`)
             .attr("preserveAspectRatio", "xMidYMid meet");
 
-        const mapTooltip = d3.select("#tooltip"); // Renamed tooltip to mapTooltip
+        const mapTooltip = d3.select("#tooltip"); 
 
-        const metricCategories = { /* ... (Keep as is) ... */ 
-            cei: { displayName: "Cybersecurity Exposure Index (CEI)", domain: [0.35, 0.67], range_colors: ["#77dd77", "#fdfd96", "#ff6961"], range_labels: ["Secure (0.00 - 0.34)", "Potentially Vulnerable (0.35 - 0.66)", "High Exposure (0.67 - 1.00)"], description: "Lower CEI indicates less cybersecurity exposure." },
-            gci: { displayName: "Global Cybersecurity Index (GCI)", domain: [40, 70], range_colors: ["#ff6961", "#fdfd96", "#77dd77"], range_labels: ["Low Commitment (< 40)", "Medium Commitment (40 - 69.99)", "High Commitment (>= 70)"], description: "Higher GCI indicates a stronger commitment to cybersecurity." },
-            ncsi: { displayName: "National Cyber Security Index (NCSI)", domain: [40, 70], range_colors: ["#ff6961", "#fdfd96", "#77dd77"], range_labels: ["Basic Preparedness (< 40)", "Developing Preparedness (40 - 69.99)", "Advanced Preparedness (>= 70)"], description: "Higher NCSI indicates better national cybersecurity preparedness." },
-            ddl: { displayName: "Digital Development Level (DDL)", domain: [40, 70], range_colors: ["#ff6961", "#fdfd96", "#77dd77"], range_labels: ["Low Development (< 40)", "Medium Development (40 - 69.99)", "High Development (>= 70)"], description: "Higher DDL indicates a more advanced digital infrastructure." }
+        const metricCategories = { 
+            cei: { displayName: "Cybersecurity Exposure Index (CEI)", shortName: "CEI", domain: [0.35, 0.67], range_colors: ["#77dd77", "#fdfd96", "#ff6961"], range_labels: ["Secure (0.00 - 0.34)", "Potentially Vulnerable (0.35 - 0.66)", "High Exposure (0.67 - 1.00)"], description: "Lower CEI indicates less cybersecurity exposure." },
+            gci: { displayName: "Global Cybersecurity Index (GCI)", shortName: "GCI", domain: [40, 70], range_colors: ["#ff6961", "#fdfd96", "#77dd77"], range_labels: ["Low Commitment (< 40)", "Medium Commitment (40 - 69.99)", "High Commitment (>= 70)"], description: "Higher GCI indicates a stronger commitment to cybersecurity." },
+            ncsi: { displayName: "National Cyber Security Index (NCSI)", shortName: "NCSI", domain: [40, 70], range_colors: ["#ff6961", "#fdfd96", "#77dd77"], range_labels: ["Basic Preparedness (< 40)", "Developing Preparedness (40 - 69.99)", "Advanced Preparedness (>= 70)"], description: "Higher NCSI indicates better national cybersecurity preparedness." },
+            ddl: { displayName: "Digital Development Level (DDL)", shortName: "DDL", domain: [40, 70], range_colors: ["#ff6961", "#fdfd96", "#77dd77"], range_labels: ["Low Development (< 40)", "Medium Development (40 - 69.99)", "High Development (>= 70)"], description: "Higher DDL indicates a more advanced digital infrastructure." }
         };
-        let currentMapMetric = 'gci'; // Renamed currentMetric
-        let cyberDataStore = []; // This will be populated and used by both charts
+        let currentMapMetric = 'gci'; 
+        let cyberDataStore = []; 
         let dataByCountryStore = new Map();
-        const mapColorScale = d3.scaleThreshold(); // Renamed colorScale
+        const mapColorScale = d3.scaleThreshold(); 
 
-        const nameMappings = { /* ... (Keep as is) ... */ 
+        const nameMappings = {  
              "United States of America": "United States", "Russian Federation": "Russia", "Dem. Rep. Congo": "Congo", "Congo": "Congo", "Dominican Rep.": "Dominican Republic", "Central African Rep.": "Central African Republic", "Korea": "South Korea", "Dem. People's Rep. Korea": "North Korea", "Czechia": "Czech Republic", "Côte d'Ivoire": "Cote d'ivoire", "Myanmar": "Myanmar", "Lao People's Dem. Rep.": "Lao PDR", "Brunei Darussalam": "Brunei Darussalam", "Syrian Arab Republic": "Syria", "Iran (Islamic Republic of)": "Iran", "Bosnia and Herz.": "Bosnia and Herzegovina", "North Macedonia": "North Macedonia", "Macedonia": "North Macedonia", "S. Sudan": "South Sudan", "Solomon Is.": "Solomon Islands", "Timor-Leste": "Timor-Leste", "United Rep. of Tanzania": "Tanzania", "eSwatini": "Eswatini", "State of Palestine": "Palestine", "Palestine": "Palestine", "Taiwan": "Taiwan", "Serbia": "Serbia", "Viet Nam": "Vietnam", "Vatican": "Vatican City", "Holy See": "Vatican City"
         };
-        const mapProjection = d3.geoMercator(); // Renamed
-        const mapPathGenerator = d3.geoPath().projection(mapProjection); // Renamed
+        const mapProjection = d3.geoMercator(); 
+        const mapPathGenerator = d3.geoPath().projection(mapProjection); 
         const mapGroup = mapSvg.append("g").attr("id", "map-group");
         const mapZoom = d3.zoom().scaleExtent([1, 8]).on("zoom", (event) => {
             mapGroup.attr("transform", event.transform);
         });
         mapSvg.call(mapZoom);
 
-        function formatMapMetricValue(metricKey, value) { /* ... (Keep as is, or rename metricKey to mapMetricKey) ... */ 
+        function formatMapMetricValue(metricKey, value) {  
             if (value === null || isNaN(value)) return 'N/A';
             if (metricKey === 'cei' && (value < 10 || value === 0)) return value.toFixed(3);
             return value.toFixed(2);
         }
-        function getMapCategoryInfo(metricKey, value) { /* ... (Keep as is, or rename metricKey to mapMetricKey) ... */
+        function getMapCategoryInfo(metricKey, value) { 
             if (value === null || isNaN(value)) return { label: 'N/A', color: '#e0e0e0' };
             const categories = metricCategories[metricKey];
             if (!categories) return { label: 'N/A', color: '#e0e0e0' };
@@ -199,7 +96,7 @@
             mapColorScale.domain(currentCategorySet.domain).range(currentCategorySet.range_colors);
             mapGroup.selectAll("path.country")
                 .transition().duration(300)
-                .attr("fill", d_geo => { /* ... */ 
+                .attr("fill", d_geo => {  
                     const geoName = d_geo.properties.name; const csvName = nameMappings[geoName] || geoName;
                     const countryData = dataByCountryStore.get(csvName);
                     if (countryData && countryData[metricKey] !== null && !isNaN(countryData[metricKey])) {
@@ -210,7 +107,7 @@
             legendHeader.append("div").attr("class", "legend-title").text(currentCategorySet.displayName);
             legendHeader.append("div").attr("class", "legend-description").text(currentCategorySet.description);
             const legendItemsContainer = d3.select("#dynamic-legend-items"); legendItemsContainer.html("");
-            currentCategorySet.range_colors.forEach((color, i) => { /* ... */ 
+            currentCategorySet.range_colors.forEach((color, i) => {  
                 const label = currentCategorySet.range_labels[i];
                 const legendItem = legendItemsContainer.append("div").attr("class", "legend-item");
                 legendItem.append("span").attr("class", "legend-color-swatch").style("background-color", color);
@@ -219,161 +116,133 @@
         }
         // --- END OF MAP CODE (mostly) ---
 
-        // --- STACKED BAR CHART CODE ---
-        function drawStackedBarChart(data) {
-            const regionsOrder = ["Europe", "South America", "Africa", "Asia-Pasific", "North America"];
-            const processedData = regionsOrder.map(regionName => {
-                const regionInfo = data.find(d => d.region === regionName);
-                if (regionInfo) return regionInfo;
-                // Return a zeroed object if a region from regionsOrder is missing in processed data
-                return { region: regionName, Advanced: 0, Weak: 0, totalCountries: 0 }; 
-            }).filter(d => d.totalCountries > 0 || regionsOrder.includes(d.region)); // Keep even if zero if it's in our list
+        // --- COUNTRY METRICS BAR CHART CODE ---
+        function drawCountryMetricsChart(countryData) {
+            if (!countryData) {
+                d3.select("#country-metrics-chart-container .chart-placeholder-text")
+                  .style("display", "block")
+                  .text("Podaci za odabranu državu nisu dostupni.");
+                d3.select("#country-metrics-chart").style("display", "none");
+                return;
+            }
+            
+            d3.select("#country-metrics-chart-container .chart-placeholder-text").style("display", "none");
+            const chartSvg = d3.select("#country-metrics-chart").style("display", "block");
+            chartSvg.selectAll("*").remove(); // Clear previous chart content
 
+            const metricsData = [
+                { metric: 'gci', value: countryData.gci, label: metricCategories.gci.shortName, fullName: metricCategories.gci.displayName, color: "#1f77b4" },
+                { metric: 'ncsi', value: countryData.ncsi, label: metricCategories.ncsi.shortName, fullName: metricCategories.ncsi.displayName, color: "#ff7f0e" },
+                { metric: 'ddl', value: countryData.ddl, label: metricCategories.ddl.shortName, fullName: metricCategories.ddl.displayName, color: "#2ca02c" },
+                { metric: 'cei', value: countryData.cei, label: metricCategories.cei.shortName, fullName: metricCategories.cei.displayName, color: "#d62728" }
+            ].filter(d => d.value !== null && !isNaN(d.value));
 
-            const keys = ["Advanced", "Weak"]; // Order: Advanced at bottom, Weak on top
-            const colors = { "Advanced": "#28598c", "Weak": "#93c6ee" }; // Dark blue, Light blue
+            if (metricsData.length === 0) {
+                 d3.select("#country-metrics-chart-container .chart-placeholder-text")
+                  .style("display", "block")
+                  .text(`Nema dostupnih metričkih podataka za ${countryData.country}.`);
+                chartSvg.style("display", "none");
+                return;
+            }
 
-            const container = d3.select("#stacked-bar-chart-container");
-            container.select("svg").remove(); // Clear previous chart
-
-            const svgWidth = container.node().getBoundingClientRect().width;
-            const svgHeight = 400;
-            const margin = { top: 60, right: 30, bottom: 50, left: 60 };
+            const containerNode = d3.select("#country-metrics-chart-container").node();
+            const svgWidth = containerNode.getBoundingClientRect().width;
+            const svgHeight = 400; // Fixed height for this chart
+            const margin = { top: 60, right: 30, bottom: 70, left: 60 }; // Increased bottom margin for labels
             const chartWidth = svgWidth - margin.left - margin.right;
             const chartHeight = svgHeight - margin.top - margin.bottom;
 
-            const svg = container.append("svg")
-                .attr("width", svgWidth)
-                .attr("height", svgHeight);
-
-            const chartG = svg.append("g")
+            chartSvg.attr("width", svgWidth).attr("height", svgHeight);
+            const chartG = chartSvg.append("g")
                 .attr("transform", `translate(${margin.left},${margin.top})`);
 
             // Title
-            svg.append("text")
+            chartSvg.append("text")
                 .attr("x", svgWidth / 2)
                 .attr("y", margin.top / 2)
                 .attr("text-anchor", "middle")
-                .attr("class", "bar-chart-title")
-                .text("Proportion of Countries with Advanced and Weak Level of Cyber Security");
+                .attr("class", "metrics-chart-title")
+                .text(`Cybersecurity Metrike za: ${countryData.country}`);
 
             const xScale = d3.scaleBand()
-                .domain(processedData.map(d => d.region))
+                .domain(metricsData.map(d => d.label)) // Use short names for x-axis
                 .range([0, chartWidth])
-                .padding(0.2);
+                .padding(0.3);
 
+            const maxValue = d3.max(metricsData, d => d.value);
             const yScale = d3.scaleLinear()
-                .domain([0, 100]) // Percentages
+                .domain([0, maxValue > 0 ? maxValue * 1.1 : 10]) // Add 10% padding, or default if max is 0 or negative
                 .range([chartHeight, 0]);
 
-            const colorScale = d3.scaleOrdinal()
-                .domain(keys)
-                .range(keys.map(key => colors[key]));
-
-            const stack = d3.stack().keys(keys);
-            const stackedData = stack(processedData);
-
-            // Tooltip
-            const barTooltip = d3.select(".stacked-bar-tooltip");
-
             // Bars
-            chartG.selectAll("g.layer")
-                .data(stackedData)
-                .join("g")
-                .attr("class", "layer")
-                .attr("fill", d => colorScale(d.key))
-                .selectAll("rect")
-                .data(d => d)
+            chartG.selectAll(".bar")
+                .data(metricsData)
                 .join("rect")
-                .attr("x", d => xScale(d.data.region))
-                .attr("y", d => yScale(d[1]))
-                .attr("height", d => yScale(d[0]) - yScale(d[1]))
+                .attr("class", "bar")
+                .attr("x", d => xScale(d.label))
+                .attr("y", d => yScale(d.value))
                 .attr("width", xScale.bandwidth())
-                .on("mouseover", function(event, d) {
-                    barTooltip.style("opacity", 1);
-                    const key = d3.select(this.parentNode).datum().key; // 'Advanced' or 'Weak'
-                    const regionData = d.data;
-                    const percent = regionData[key];
-                    barTooltip.html(`<strong>${regionData.region}</strong><br>${key}: ${percent.toFixed(1)}%`)
+                .attr("height", d => chartHeight - yScale(d.value))
+                .attr("fill", d => d.color)
+                .on("mouseover", function(event, d) { // Simple tooltip for full name
+                    mapTooltip.style("opacity", 1)
+                        .html(`<strong>${d.fullName}</strong><br>Vrijednost: ${formatMapMetricValue(d.metric, d.value)}`)
                         .style("left", (event.pageX + 10) + "px")
                         .style("top", (event.pageY - 28) + "px");
                 })
                 .on("mouseout", function() {
-                    barTooltip.style("opacity", 0);
+                    mapTooltip.style("opacity", 0);
                 });
+            
+            // Value labels on bars
+            chartG.selectAll(".bar-value-label")
+                .data(metricsData)
+                .join("text")
+                .attr("class", "bar-value-label")
+                .attr("x", d => xScale(d.label) + xScale.bandwidth() / 2)
+                .attr("y", d => yScale(d.value) - 5) // Position above the bar
+                .text(d => formatMapMetricValue(d.metric, d.value));
 
-            // Axes
+
+            // X-axis
             chartG.append("g")
                 .attr("class", "x-axis")
                 .attr("transform", `translate(0,${chartHeight})`)
-                .call(d3.axisBottom(xScale));
+                .call(d3.axisBottom(xScale))
+                .selectAll("text") // Further style X-axis labels if they overlap
+                .style("text-anchor", "middle");
 
+
+            // Y-axis
             chartG.append("g")
                 .attr("class", "y-axis")
-                .call(d3.axisLeft(yScale).tickFormat(d => d + "%"));
+                .call(d3.axisLeft(yScale).ticks(5).tickFormat(d3.format(".2~f"))); // General format, adapt if needed
             
             // Y-axis Label
-            svg.append("text")
+            chartSvg.append("text")
                 .attr("transform", "rotate(-90)")
                 .attr("y", margin.left / 4)
                 .attr("x", 0 - (chartHeight / 2) - margin.top)
                 .attr("dy", "1em")
                 .style("text-anchor", "middle")
                 .attr("class", "axis-label")
-                .text("(Percent %)");
-
-            // Legend
-            const legend = svg.append("g")
-                .attr("class", "chart-legend")
-                .attr("transform", `translate(${chartWidth / 2 - 50}, ${chartHeight + margin.top + 30})`);
-
-            keys.forEach((key, i) => {
-                const legendItem = legend.append("g")
-                    .attr("class", "legend-item")
-                    .attr("transform", `translate(${i * 100}, 0)`);
-
-                legendItem.append("rect")
-                    .attr("x", 0)
-                    .attr("width", 18)
-                    .attr("height", 18)
-                    .style("fill", colorScale(key));
-
-                legendItem.append("text")
-                    .attr("x", 24)
-                    .attr("y", 9)
-                    .attr("dy", ".35em")
-                    .style("text-anchor", "start")
-                    .text(key);
-            });
+                .text("Vrijednost Indeksa");
         }
 
-        function processDataForStackedBar(fullCyberData) {
-            // Filter for entries that have a region and GCI score
-            const validData = fullCyberData.filter(d => d.region && d.gci !== null && !isNaN(d.gci));
-
-            const regionalSummary = d3.rollup(validData,
-                v => {
-                    const total = v.length;
-                    const advancedCount = v.filter(d => d.gci >= 70).length;
-                    const weakCount = total - advancedCount;
-                    return {
-                        region: v[0].region,
-                        Advanced: total > 0 ? (advancedCount / total) * 100 : 0,
-                        Weak: total > 0 ? (weakCount / total) * 100 : 0,
-                        totalCountries: total
-                    };
-                },
-                d => d.region // Group by region
-            );
-            return Array.from(regionalSummary.values());
+        // Function to initialize the placeholder for the country chart
+        function initializeCountryChartPlaceholder() {
+            const container = d3.select("#country-metrics-chart-container");
+            container.select(".chart-placeholder-text").style("display", "block");
+            container.select("#country-metrics-chart").style("display", "none");
         }
-        // --- END OF STACKED BAR CHART CODE ---
+
+        // --- END OF COUNTRY METRICS BAR CHART CODE ---
 
 
         // --- DATA LOADING AND INITIALIZATION ---
         Promise.all([
             d3.json("https://unpkg.com/world-atlas@2/countries-110m.json"),
-            d3.csv("Cyber_security.csv", d_csv => { // Main CSV parsing
+            d3.csv("Cyber_security.csv", d_csv => { 
                 return {
                     country: d_csv.Country, region: d_csv.Region,
                     cei: d_csv.CEI && d_csv.CEI.trim() !== "" ? +d_csv.CEI : null,
@@ -383,10 +252,9 @@
                 };
             })
         ]).then(([worldData, loadedCyberData]) => {
-            cyberDataStore = loadedCyberData; // Store globally
+            cyberDataStore = loadedCyberData; 
             dataByCountryStore = new Map(cyberDataStore.map(d => [d.country, d]));
 
-            // Initialize Map
             const countries = topojson.feature(worldData, worldData.objects.countries);
             mapProjection.fitSize([mapWidth, mapHeight], countries);
             mapGroup.selectAll("path.country")
@@ -395,10 +263,10 @@
                 .attr("class", "country")
                 .attr("d", mapPathGenerator)
                 .style("vector-effect", "non-scaling-stroke")
-                .on("mouseover", function(event, d_geo) { /* ... map tooltip ... */ 
+                .on("mouseover", function(event, d_geo) {  
                     mapTooltip.style("opacity", 1); d3.select(this).raise();
                 })
-                .on("mousemove", function(event, d_geo) { /* ... map tooltip logic ... */ 
+                .on("mousemove", function(event, d_geo) {  
                     const geoName = d_geo.properties.name; const csvName = nameMappings[geoName] || geoName;
                     const countryData = dataByCountryStore.get(csvName);
                     let tooltipText = `<strong>${geoName}</strong>`;
@@ -416,11 +284,24 @@
                     } else { tooltipText += "<br>Data not available in CSV dataset"; }
                     mapTooltip.html(tooltipText).style("left", (event.pageX + 15) + "px").style("top", (event.pageY - 30) + "px");
                 })
-                .on("mouseout", function(event, d_geo) { mapTooltip.style("opacity", 0); });
+                .on("mouseout", function(event, d_geo) { mapTooltip.style("opacity", 0); })
+                .on("click", function(event, d_geo) { // <<<--- CLICK HANDLER FOR MAP
+                    const geoName = d_geo.properties.name;
+                    const csvName = nameMappings[geoName] || geoName;
+                    const countryDetails = dataByCountryStore.get(csvName);
+                    if (countryDetails) {
+                        drawCountryMetricsChart(countryDetails);
+                    } else {
+                        // Handle case where country from map is not in CSV or has no data
+                        drawCountryMetricsChart( { country: geoName } ); // Pass at least name to show in title
+                        console.warn(`No detailed data for ${geoName} (CSV name: ${csvName})`);
+                    }
+                });
             
             updateMapAndLegend(currentMapMetric);
+            initializeCountryChartPlaceholder(); // Initialize placeholder for the country chart
 
-            // Event Listeners for Map
+            // Event Listeners for Map Controls
             d3.select("#metric-select").on("change", function(event) {
                 updateMapAndLegend(d3.select(this).property("value"));
             });
@@ -428,15 +309,12 @@
                 mapSvg.transition().duration(750).call(mapZoom.transform, d3.zoomIdentity);
             });
 
-            // Prepare data and draw Stacked Bar Chart
-            const stackedBarData = processDataForStackedBar(cyberDataStore);
-            drawStackedBarChart(stackedBarData);
 
         }).catch(error => {
             console.error("Error loading data:", error);
             mapSvg.append("text").attr("x", 20).attr("y", 50).text("Error loading map or CSV. Check console.");
             d3.select("#dynamic-legend-header").html(`<p class="legend-title" style="color: red;">Error loading data.</p><p class="legend-description">Check console for details.</p>`);
-            d3.select("#stacked-bar-chart-container").html(`<p style="color: red; text-align:center;">Error loading data for bar chart. See console.</p>`);
+            d3.select("#country-metrics-chart-container").html(`<p class="chart-placeholder-text" style="color: red;">Error loading data. See console.</p>`);
         });
     </script>
 </body>
