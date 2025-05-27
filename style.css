@@ -2,19 +2,38 @@ body {
   font-family: sans-serif;
   display: flex;
   flex-direction: row;
+  flex-wrap: wrap;
   margin: 20px;
   background-color: #f4f4f4;
   gap: 14px;
 }
+
+.map-container {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  width: 48%;
+  max-width: 48%;
+  height: fit-content;
+}
+
+.chart-gauge-container {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 48%;
+  height: fit-content;
+}
+
 .chart-container {
   background-color: #fff;
   padding: 20px;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  width: 50%;
-  max-width: 50%;
   height: fit-content;
 }
+
 #controls {
   margin-bottom: 15px;
   padding: 10px;
@@ -144,3 +163,95 @@ body {
   color: #777;
   text-align: center;
 }
+
+/* Container for Gauge and Info */
+#country-gauge-info-container {
+  flex: 1; /* Gauge/info takes less space */
+  min-width: 250px; /* Minimum width */
+  display: flex;
+  flex-direction: row;
+  align-items: center; /* Center gauge and info text */
+}
+#country-gauge-chart-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+.gauge-label {
+  font-size: 0.9em;
+  fill: #333;
+  text-anchor: middle;
+}
+.gauge-value-text {
+  font-size: 1.1em;
+  font-weight: bold;
+  text-anchor: middle;
+  fill: #333;
+}
+#country-info-display {
+  text-align: center;
+  padding: 10px;
+  border-left: 1px solid #eee;
+  width: 100%;
+}
+#country-info-display h3 {
+  margin-top: 0;
+  margin-bottom: 5px;
+  font-size: 1.1em;
+}
+#country-info-display p {
+  margin: 3px 0;
+  font-size: 0.9em;
+}
+
+#top-bottom-countries-container {
+  padding: 15px;
+  border: 1px solid #e0e0e0;
+  border-radius: 5px;
+  background-color: #f9f9f9;
+}
+#top-bottom-countries-container h3 {
+  text-align: center;
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-size: 1.1em;
+  color: #333;
+}
+.country-list-section {
+  margin-bottom: 15px;
+}
+.country-list-section h4 {
+  margin-top: 0;
+  margin-bottom: 8px;
+  font-size: 1em;
+  color: #555;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 5px;
+}
+.country-list-section ul {
+  list-style-type: none;
+  padding-left: 0;
+  margin: 0;
+}
+.country-list-section li {
+  padding: 4px 0;
+  font-size: 0.9em;
+  border-bottom: 1px dashed #eee;
+}
+.country-list-section li:last-child {
+  border-bottom: none;
+}
+.country-list-section .cei-value {
+  float: right;
+  font-weight: bold;
+  color: #007bff; /* Plava boja za CEI vrijednost */
+}
+.safest .cei-value {
+  color: #28a745;
+} /* Zelena za najsigurnije */
+.most-exposed .cei-value {
+  color: #dc3545;
+} /* Crvena za najizloženije */
