@@ -91,40 +91,219 @@
         function updateMapAndLegend(metricKey) { currentMapMetric = metricKey; const C = metricCategories[metricKey]; mapColorScale.domain(C.domain).range(C.range_colors); mapGroup.selectAll("path.country").transition().duration(300).attr("fill",d_geo=>{const gN=d_geo.properties.name,cN=nameMappings[gN]||gN,cD=dataByCountryStore.get(cN); if(cD&&cD[metricKey]!==null&&!isNaN(cD[metricKey]))return mapColorScale(cD[metricKey]); return "#e0e0e0";}); const lH=d3.select("#dynamic-legend-header");lH.html("");lH.append("div").attr("class","legend-title").text(C.displayName);lH.append("div").attr("class","legend-description").text(C.description); const lI=d3.select("#dynamic-legend-items");lI.html(""); C.range_colors.forEach((c,i)=>{const L=C.range_labels[i],item=lI.append("div").attr("class","legend-item");item.append("span").attr("class","legend-color-swatch").style("background-color",c);item.append("span").text(L);});}
         // --- END OF MAP CODE ---
 
-        // --- COUNTRY METRICS BAR CHART CODE ---
+        // --- COUNTRY METRICS BAR CHART CODE WITH ANIMATIONS ---
         function drawCountryMetricsChart(countryData) {
-            if (!countryData) { d3.select("#country-metrics-chart-container .chart-placeholder-text").style("display", "block").text("Data for the selected country is not available."); d3.select("#country-metrics-chart").style("display", "none"); return; }
-            d3.select("#country-metrics-chart-container .chart-placeholder-text").style("display", "none"); const chartSvg = d3.select("#country-metrics-chart").style("display", "block"); chartSvg.selectAll("*").remove();
-            const metricsData = [{ metric: 'gci', value: countryData.gci, label: metricCategories.gci.shortName, fullName: metricCategories.gci.displayName, color: "#1f77b4" },{ metric: 'ncsi', value: countryData.ncsi, label: metricCategories.ncsi.shortName, fullName: metricCategories.ncsi.displayName, color: "#ff7f0e" },{ metric: 'ddl', value: countryData.ddl, label: metricCategories.ddl.shortName, fullName: metricCategories.ddl.displayName, color: "#2ca02c" },{ metric: 'cei', value: countryData.cei, label: metricCategories.cei.shortName, fullName: metricCategories.cei.displayName, color: "#d62728" }].filter(d => d.value !== null && !isNaN(d.value));
-            if (metricsData.length === 0) { d3.select("#country-metrics-chart-container .chart-placeholder-text").style("display", "block").text(`No metrics available for ${countryData.country}.`); chartSvg.style("display", "none"); return;}
-            const containerNode = d3.select("#country-metrics-chart-container").node(); const svgWidth = containerNode.getBoundingClientRect().width; const svgHeight = 400; const margin = { top: 60, right: 30, bottom: 70, left: 60 }; const chartWidth = svgWidth - margin.left - margin.right; const chartHeight = svgHeight - margin.top - margin.bottom;
-            chartSvg.attr("width", svgWidth).attr("height", svgHeight); const chartG = chartSvg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
-            chartSvg.append("text").attr("x", svgWidth / 2).attr("y", margin.top / 2).attr("text-anchor", "middle").attr("class", "metrics-chart-title").text(`Cybersecurity Metrics for ${countryData.country}`);
-            const xScale = d3.scaleBand().domain(metricsData.map(d => d.label)).range([0, chartWidth]).padding(0.3);
-            const maxValue = d3.max(metricsData, d => d.value); const yScale = d3.scaleLinear().domain([0, maxValue > 0 ? maxValue * 1.1 : 10]).range([chartHeight, 0]);
-            chartG.selectAll(".bar").data(metricsData).join("rect").attr("class", "bar").attr("x", d => xScale(d.label)).attr("y", d => yScale(d.value)).attr("width", xScale.bandwidth()).attr("height", d => chartHeight - yScale(d.value)).attr("fill", d => d.color)
-            .on("mouseover", function(event, d) { mapTooltip.style("opacity",1).html(`<strong>${d.fullName}</strong><br>Value: ${formatMapMetricValue(d.metric, d.value)}`).style("left",(event.pageX+10)+"px").style("top",(event.pageY-28)+"px");}).on("mouseout", function(){mapTooltip.style("opacity",0);});
-            chartG.selectAll(".bar-value-label").data(metricsData).join("text").attr("class", "bar-value-label").attr("x", d => xScale(d.label) + xScale.bandwidth() / 2).attr("y", d => yScale(d.value) - 5).text(d => formatMapMetricValue(d.metric, d.value));
-            chartG.append("g").attr("class", "x-axis").attr("transform", `translate(0,${chartHeight})`).call(d3.axisBottom(xScale)).selectAll("text").style("text-anchor", "middle");
-            chartG.append("g").attr("class", "y-axis").call(d3.axisLeft(yScale).ticks(5).tickFormat(d3.format(".2~f")));
-            chartSvg.append("text").attr("transform", "rotate(-90)").attr("y", margin.left / 4).attr("x", 0 - (chartHeight / 2) - margin.top).attr("dy", "1em").style("text-anchor", "middle").attr("class", "axis-label").text("Index Value");
+            if (!countryData) { 
+                d3.select("#country-metrics-chart-container .chart-placeholder-text")
+                    .style("display", "block")
+                    .text("Data for the selected country is not available."); 
+                d3.select("#country-metrics-chart").style("display", "none"); 
+                return; 
+            }
+            
+            d3.select("#country-metrics-chart-container .chart-placeholder-text").style("display", "none"); 
+            const chartSvg = d3.select("#country-metrics-chart").style("display", "block"); 
+            
+            const metricsData = [
+                { metric: 'gci', value: countryData.gci, label: metricCategories.gci.shortName, fullName: metricCategories.gci.displayName, color: "#1f77b4" },
+                { metric: 'ncsi', value: countryData.ncsi, label: metricCategories.ncsi.shortName, fullName: metricCategories.ncsi.displayName, color: "#ff7f0e" },
+                { metric: 'ddl', value: countryData.ddl, label: metricCategories.ddl.shortName, fullName: metricCategories.ddl.displayName, color: "#2ca02c" },
+                { metric: 'cei', value: countryData.cei, label: metricCategories.cei.shortName, fullName: metricCategories.cei.displayName, color: "#d62728" }
+            ].filter(d => d.value !== null && !isNaN(d.value));
+            
+            if (metricsData.length === 0) { 
+                d3.select("#country-metrics-chart-container .chart-placeholder-text")
+                    .style("display", "block")
+                    .text(`No metrics available for ${countryData.country}.`); 
+                chartSvg.style("display", "none"); 
+                return;
+            }
+            
+            const containerNode = d3.select("#country-metrics-chart-container").node(); 
+            const svgWidth = containerNode.getBoundingClientRect().width; 
+            const svgHeight = 400; 
+            const margin = { top: 60, right: 30, bottom: 70, left: 60 }; 
+            const chartWidth = svgWidth - margin.left - margin.right; 
+            const chartHeight = svgHeight - margin.top - margin.bottom;
+            
+            chartSvg.attr("width", svgWidth).attr("height", svgHeight);
+            
+            // Animation duration
+            const animationDuration = 800;
+            const staggerDelay = 100;
+            
+            // Get or create main chart group
+            let chartG = chartSvg.select("g.main-chart-group");
+            if (chartG.empty()) {
+                chartG = chartSvg.append("g")
+                    .attr("class", "main-chart-group")
+                    .attr("transform", `translate(${margin.left},${margin.top})`);
+            }
+            
+            // Add or update title
+            let title = chartSvg.select(".metrics-chart-title");
+            if (title.empty()) {
+                title = chartSvg.append("text")
+                    .attr("x", svgWidth / 2)
+                    .attr("y", margin.top / 2)
+                    .attr("text-anchor", "middle")
+                    .attr("class", "metrics-chart-title")
+                    .style("opacity", 0);
+            }
+            
+            title.transition()
+                .duration(animationDuration / 2)
+                .style("opacity", 1)
+                .text(`Cybersecurity Metrics for ${countryData.country}`);
+            
+            // Setup scales
+            const xScale = d3.scaleBand()
+                .domain(metricsData.map(d => d.label))
+                .range([0, chartWidth])
+                .padding(0.3);
+            
+            const maxValue = d3.max(metricsData, d => d.value); 
+            const yScale = d3.scaleLinear()
+                .domain([0, maxValue > 0 ? maxValue * 1.1 : 10])
+                .range([chartHeight, 0]);
+            
+            // Create/update bars with smooth transition
+            const bars = chartG.selectAll(".bar")
+                .data(metricsData, d => d.metric); 
+            
+            // Enter new bars
+            const barsEnter = bars.enter()
+                .append("rect")
+                .attr("class", "bar")
+                .attr("x", d => xScale(d.label))
+                .attr("y", chartHeight)
+                .attr("width", xScale.bandwidth())
+                .attr("height", 0)
+                .attr("fill", d => d.color);
+            
+            // Update existing bars + new bars
+            const barsUpdate = barsEnter.merge(bars);
+            
+            barsUpdate.transition()
+                .duration(animationDuration)
+                .delay((d, i) => i * staggerDelay)
+                .ease(d3.easeBackOut.overshoot(1.1))
+                .attr("x", d => xScale(d.label))
+                .attr("y", d => yScale(d.value))
+                .attr("width", xScale.bandwidth())
+                .attr("height", d => chartHeight - yScale(d.value))
+                .attr("fill", d => d.color);
+            
+            // Remove bars that are no longer needed
+            bars.exit()
+                .transition()
+                .duration(animationDuration / 2)
+                .attr("height", 0)
+                .attr("y", chartHeight)
+                .remove();
+            
+            // Add hover effects
+            barsUpdate.on("mouseover", function(event, d) { 
+                d3.select(this)
+                    .transition()
+                    .duration(200)
+                    .attr("fill", d3.color(d.color).brighter(0.3));
+                    
+                mapTooltip.style("opacity", 1)
+                    .html(`<strong>${d.fullName}</strong><br>Value: ${formatMapMetricValue(d.metric, d.value)}`)
+                    .style("left", (event.pageX + 10) + "px")
+                    .style("top", (event.pageY - 28) + "px");
+            })
+            .on("mouseout", function(event, d) {
+                d3.select(this)
+                    .transition()
+                    .duration(200)
+                    .attr("fill", d.color);
+                    
+                mapTooltip.style("opacity", 0);
+            });
+            
+            // Create/update value labels
+            const valueLabels = chartG.selectAll(".bar-value-label")
+                .data(metricsData, d => d.metric);
+            
+            const valueLabelsEnter = valueLabels.enter()
+                .append("text")
+                .attr("class", "bar-value-label")
+                .attr("x", d => xScale(d.label) + xScale.bandwidth() / 2)
+                .attr("y", chartHeight)
+                .style("opacity", 0);
+            
+            const valueLabelsUpdate = valueLabelsEnter.merge(valueLabels);
+            
+            valueLabelsUpdate.transition()
+                .duration(animationDuration)
+                .delay((d, i) => i * staggerDelay)
+                .ease(d3.easeBackOut.overshoot(1.1))
+                .attr("x", d => xScale(d.label) + xScale.bandwidth() / 2)
+                .attr("y", d => yScale(d.value) - 5)
+                .text(d => formatMapMetricValue(d.metric, d.value))
+                .style("opacity", 1);
+            
+            valueLabels.exit()
+                .transition()
+                .duration(animationDuration / 2)
+                .style("opacity", 0)
+                .remove();
+            
+            // Create/update axes
+            let xAxis = chartG.select(".x-axis");
+            if (xAxis.empty()) {
+                xAxis = chartG.append("g")
+                    .attr("class", "x-axis")
+                    .attr("transform", `translate(0,${chartHeight})`);
+            }
+            
+            xAxis.transition()
+                .duration(animationDuration)
+                .call(d3.axisBottom(xScale));
+            
+            xAxis.selectAll("text").style("text-anchor", "middle");
+            
+            let yAxis = chartG.select(".y-axis");
+            if (yAxis.empty()) {
+                yAxis = chartG.append("g")
+                    .attr("class", "y-axis");
+            }
+            
+            yAxis.transition()
+                .duration(animationDuration)
+                .call(d3.axisLeft(yScale).ticks(5).tickFormat(d3.format(".2~f")));
+            
+            // Add/update y-axis label
+            let yAxisLabel = chartSvg.select(".axis-label");
+            if (yAxisLabel.empty()) {
+                yAxisLabel = chartSvg.append("text")
+                    .attr("transform", "rotate(-90)")
+                    .attr("y", margin.left / 4)
+                    .attr("x", 0 - (chartHeight / 2) - margin.top)
+                    .attr("dy", "1em")
+                    .style("text-anchor", "middle")
+                    .attr("class", "axis-label")
+                    .text("Index Value");
+            }
         }
         // --- END OF COUNTRY METRICS BAR CHART CODE ---
 
-        // --- GAUGE CHART AND INFO DISPLAY CODE ---
+        // --- GAUGE CHART AND INFO DISPLAY CODE WITH ANIMATIONS ---
         function drawCountryGaugeChart(countryData) {
             const gaugeContainer = d3.select("#country-gauge-chart-container");
             const gaugeSvg = d3.select("#country-gauge-chart");
             
             gaugeContainer.select(".chart-placeholder-text").style("display", "none");
-            gaugeSvg.style("display", "block").selectAll("*").remove();
+            gaugeSvg.style("display", "block");
 
             const ceiValue = countryData.cei;
 
             if (ceiValue === null || isNaN(ceiValue)) {
                 gaugeContainer.select(".chart-placeholder-text")
-                  .style("display", "block")
-                  .text(`CEI is not available for ${countryData.country || 'selected country'}.`);
+                .style("display", "block")
+                .text(`CEI is not available for ${countryData.country || 'selected country'}.`);
                 gaugeSvg.style("display", "none");
                 return;
             }
@@ -137,112 +316,275 @@
             const radius = Math.min(chartWidth / 2, chartHeight);
 
             gaugeSvg.attr("width", width).attr("height", height);
-            const g = gaugeSvg.append("g").attr("transform", `translate(${width / 2}, ${margin.top + radius})`);
+            
+            // Get or create main group
+            let g = gaugeSvg.select("g.main-gauge-group");
+            if (g.empty()) {
+                g = gaugeSvg.append("g")
+                    .attr("class", "main-gauge-group")
+                    .attr("transform", `translate(${width / 2}, ${margin.top + radius})`);
+            } else {
+                g.transition()
+                    .duration(500)
+                    .attr("transform", `translate(${width / 2}, ${margin.top + radius})`);
+            }
 
-            // Definicija gradijenta
-            const defs = gaugeSvg.append("defs");
-            const gradient = defs.append("linearGradient")
-                .attr("id", "gaugeGradient")
-                .attr("x1", "0%") // Gradijent ide s lijeva na desno
-                .attr("y1", "0%")
-                .attr("x2", "100%")
-                .attr("y2", "0%");
+            // Create/update gradient definition
+            let defs = gaugeSvg.select("defs");
+            if (defs.empty()) {
+                defs = gaugeSvg.append("defs");
+            }
+            
+            let gradient = defs.select("#gaugeGradient");
+            if (gradient.empty()) {
+                gradient = defs.append("linearGradient")
+                    .attr("id", "gaugeGradient")
+                    .attr("x1", "0%")
+                    .attr("y1", "0%")
+                    .attr("x2", "100%")
+                    .attr("y2", "0%");
 
-            // Boje za gradijent: zelena -> žuta -> crvena
-            // Offseti određuju gdje se boja mijenja unutar gradijenta
-            gradient.append("stop")
-                .attr("offset", "0%") // Početak gradijenta
-                .attr("stop-color", "#77dd77"); // Zelena (Sigurno)
+                gradient.append("stop")
+                    .attr("offset", "0%")
+                    .attr("stop-color", "#77dd77");
 
-            gradient.append("stop")
-                .attr("offset", "50%") // Sredina gradijenta
-                .attr("stop-color", "#fdfd96"); // Žuta (Upozorenje)
+                gradient.append("stop")
+                    .attr("offset", "50%")
+                    .attr("stop-color", "#fdfd96");
 
-            gradient.append("stop")
-                .attr("offset", "100%") // Kraj gradijenta
-                .attr("stop-color", "#ff6961"); // Crvena (Ranjivo)
-
+                gradient.append("stop")
+                    .attr("offset", "100%")
+                    .attr("stop-color", "#ff6961");
+            }
 
             const arcGenerator = d3.arc()
                 .innerRadius(radius * 0.7)
                 .outerRadius(radius)
-                .startAngle(-Math.PI / 2) // -90 stupnjeva (lijevo)
-                .endAngle(Math.PI / 2)   // +90 stupnjeva (desno)
+                .startAngle(-Math.PI / 2)
+                .endAngle(Math.PI / 2)
                 .cornerRadius(3);
 
-            // Crtanje polukružnog luka s primijenjenim gradijentom
-            g.append("path")
-                .attr("d", arcGenerator)
-                .style("fill", "url(#gaugeGradient)"); // Primijeni gradijent pomoću ID-a
+            // Create/update gauge arc
+            let gaugeArc = g.select(".gauge-arc");
+            if (gaugeArc.empty()) {
+                gaugeArc = g.append("path")
+                    .attr("class", "gauge-arc")
+                    .attr("d", arcGenerator)
+                    .style("fill", "url(#gaugeGradient)")
+                    .style("opacity", 0);
+                
+                // Animate arc appearance
+                gaugeArc.transition()
+                    .duration(800)
+                    .style("opacity", 1);
+            }
 
-            // Needle (kazaljka)
+            // Needle animation setup
             const needleAngleScale = d3.scaleLinear()
-                .domain([0, 1]) // CEI raspon (0 = sigurno, 1 = ranjivo)
-                .range([-Math.PI / 2, Math.PI / 2]); // Raspon kuta za kazaljku
+                .domain([0, 1])
+                .range([-Math.PI / 2, Math.PI / 2]);
 
-            const needleAngle = needleAngleScale(ceiValue);
+            const targetNeedleAngle = needleAngleScale(ceiValue);
             const needleLength = radius * 0.85;
 
-            g.append("line")
-                .attr("x1", 0).attr("y1", 0)
-                .attr("x2", Math.cos(needleAngle - Math.PI / 2) * needleLength) 
-                .attr("y2", Math.sin(needleAngle - Math.PI / 2) * needleLength)
-                .attr("stroke", "black")
-                .attr("stroke-width", 2.5)
-                .attr("stroke-linecap", "round"); // Zaobljeni kraj kazaljke
+            // Store current and target angles as data attributes
+            let currentNeedleAngle = -Math.PI / 2; // Default start position (secure)
+            const existingNeedle = g.select(".gauge-needle");
+            if (!existingNeedle.empty() && existingNeedle.datum()) {
+                currentNeedleAngle = existingNeedle.datum();
+            }
+
+            // Create/update needle
+            let needle = g.select(".gauge-needle");
+            if (needle.empty()) {
+                needle = g.append("line")
+                    .attr("class", "gauge-needle")
+                    .datum(currentNeedleAngle) // Store angle as data
+                    .attr("x1", 0)
+                    .attr("y1", 0)
+                    .attr("x2", Math.cos(currentNeedleAngle - Math.PI / 2) * needleLength)
+                    .attr("y2", Math.sin(currentNeedleAngle - Math.PI / 2) * needleLength)
+                    .attr("stroke", "black")
+                    .attr("stroke-width", 2.5)
+                    .attr("stroke-linecap", "round")
+                    .style("opacity", 0);
+                
+                // Fade in needle
+                needle.transition()
+                    .duration(400)
+                    .delay(600)
+                    .style("opacity", 1);
+            }
+
+            // Animate needle to new position using coordinate calculation
+            needle.datum(targetNeedleAngle) // Update stored angle
+                .transition()
+                .duration(1200)
+                .delay(needle.style("opacity") == "0" ? 1000 : 200)
+                .ease(d3.easeBackOut.overshoot(1.1))
+                .attrTween("x2", function() {
+                    const interpolate = d3.interpolate(currentNeedleAngle, targetNeedleAngle);
+                    return function(t) {
+                        const angle = interpolate(t);
+                        return Math.cos(angle - Math.PI / 2) * needleLength;
+                    };
+                })
+                .attrTween("y2", function() {
+                    const interpolate = d3.interpolate(currentNeedleAngle, targetNeedleAngle);
+                    return function(t) {
+                        const angle = interpolate(t);
+                        return Math.sin(angle - Math.PI / 2) * needleLength;
+                    };
+                });
             
-            // Središnji krug za kazaljku
-            g.append("circle").attr("cx", 0).attr("cy", 0).attr("r", 5).style("fill", "black");
+            // Create/update center circle
+            let centerCircle = g.select(".gauge-center");
+            if (centerCircle.empty()) {
+                centerCircle = g.append("circle")
+                    .attr("class", "gauge-center")
+                    .attr("cx", 0)
+                    .attr("cy", 0)
+                    .attr("r", 0)
+                    .style("fill", "black");
+                
+                // Animate center circle
+                centerCircle.transition()
+                    .duration(600)
+                    .delay(800)
+                    .ease(d3.easeBackOut)
+                    .attr("r", 5);
+            }
 
-            // Tekstualne oznake "SIGURNO" i "RANJIVO"
-            g.append("text")
-                .attr("class", "gauge-label")
-                .attr("x", -radius * 0.8) // Pozicija lijevo
-                .attr("y", radius * 0.35) 
-                .text("Secure");
+            // Create/update labels
+            let secureLabel = g.select(".gauge-label-secure");
+            if (secureLabel.empty()) {
+                secureLabel = g.append("text")
+                    .attr("class", "gauge-label gauge-label-secure")
+                    .attr("x", -radius * 0.8)
+                    .attr("y", radius * 0.35)
+                    .text("Secure")
+                    .style("opacity", 0);
+                
+                secureLabel.transition()
+                    .duration(600)
+                    .delay(1000)
+                    .style("opacity", 1);
+            }
 
-            g.append("text")
-                .attr("class", "gauge-label")
-                .attr("x", radius * 0.8) // Pozicija desno
-                .attr("y", radius * 0.35) 
-                .text("Vulnerable");
+            let vulnerableLabel = g.select(".gauge-label-vulnerable");
+            if (vulnerableLabel.empty()) {
+                vulnerableLabel = g.append("text")
+                    .attr("class", "gauge-label gauge-label-vulnerable")
+                    .attr("x", radius * 0.8)
+                    .attr("y", radius * 0.35)
+                    .text("Vulnerable")
+                    .style("opacity", 0);
+                
+                vulnerableLabel.transition()
+                    .duration(600)
+                    .delay(1100)
+                    .style("opacity", 1);
+            }
 
-            // Prikaz CEI vrijednosti ispod brzinomjera
-            gaugeSvg.append("text")
-                .attr("class", "gauge-value-text")
-                .attr("x", width / 2)
-                .attr("y", height - margin.bottom / 2 + 5) 
-                .text(`CEI: ${formatMapMetricValue('cei', ceiValue)}`);
+            // Create/update value display with animated counter
+            let valueText = gaugeSvg.select(".gauge-value-text");
+            if (valueText.empty()) {
+                valueText = gaugeSvg.append("text")
+                    .attr("class", "gauge-value-text")
+                    .attr("x", width / 2)
+                    .attr("y", height - margin.bottom / 2 + 5)
+                    .style("opacity", 0);
+            }
+
+            // Animate value counter
+            const currentValue = valueText.datum() || 0;
+            valueText.datum(ceiValue);
+            
+            valueText.transition()
+                .duration(1200)
+                .delay(200)
+                .style("opacity", 1)
+                .tween("text", function() {
+                    const interpolate = d3.interpolate(currentValue, ceiValue);
+                    return function(t) {
+                        const value = interpolate(t);
+                        this.textContent = `CEI: ${formatMapMetricValue('cei', value)}`;
+                    };
+                });
         }
 
         function updateCountryInfoDisplay(countryData) {
             const infoContainer = d3.select("#country-info-display");
-            infoContainer.selectAll("*").remove(); // Clear previous info
             infoContainer.select(".chart-placeholder-text").style("display", "none");
 
-
             if (!countryData || !countryData.country) {
-                 infoContainer.append("p").attr("class","chart-placeholder-text").text("Select a country to view information.");
+                let placeholder = infoContainer.select(".chart-placeholder-text");
+                if (placeholder.empty()) {
+                    placeholder = infoContainer.append("p").attr("class", "chart-placeholder-text");
+                }
+                placeholder.text("Select a country to view information.").style("display", "block");
                 return;
             }
             
-            infoContainer.append("h3").text(countryData.country);
-            infoContainer.append("p").text(`Continent: ${countryData.region || 'N/A'}`);
+            // Animate country name
+            let countryTitle = infoContainer.select("h3");
+            if (countryTitle.empty()) {
+                countryTitle = infoContainer.append("h3")
+                    .style("opacity", 0);
+            }
             
-            // Determine status based on CEI
+            countryTitle.transition()
+                .duration(500)
+                .style("opacity", 1)
+                .text(countryData.country);
+            
+            // Animate continent info
+            let continentInfo = infoContainer.select(".continent-info");
+            if (continentInfo.empty()) {
+                continentInfo = infoContainer.append("p")
+                    .attr("class", "continent-info")
+                    .style("opacity", 0);
+            }
+            
+            continentInfo.transition()
+                .duration(500)
+                .delay(200)
+                .style("opacity", 1)
+                .text(`Continent: ${countryData.region || 'N/A'}`);
+            
+            // Determine and animate status
             let statusText = "Status: N/A";
+            let statusColor = "#666";
+            
             if (countryData.cei !== null && !isNaN(countryData.cei)) {
                 if (countryData.cei < 0.35) {
                     statusText = "Status: Secure";
+                    statusColor = "#77dd77";
                 } else if (countryData.cei < 0.67) {
                     statusText = "Status: Potentially Vulnerable";
+                    statusColor = "#fdfd96";
                 } else {
                     statusText = "Status: High Exposure / Vulnerable";
+                    statusColor = "#ff6961";
                 }
             }
-            infoContainer.append("p").text(statusText);
+            
+            let statusInfo = infoContainer.select(".status-info");
+            if (statusInfo.empty()) {
+                statusInfo = infoContainer.append("p")
+                    .attr("class", "status-info")
+                    .style("opacity", 0);
+            }
+            
+            statusInfo.transition()
+                .duration(500)
+                .delay(400)
+                .style("opacity", 1)
+                .style("color", statusColor)
+                .style("font-weight", "bold")
+                .text(statusText);
         }
-        
+
         function initializeCountrySpecificDashboardPlaceholders() {
             // Placeholder for bar chart
             const barChartContainer = d3.select("#country-metrics-chart-container");
@@ -257,7 +599,7 @@
             const infoContainer = d3.select("#country-info-display");
             infoContainer.selectAll("h3, p:not(.chart-placeholder-text)").remove();
         }
-        // --- END OF NEW GAUGE CHART AND INFO DISPLAY CODE ---
+        // --- END OF GAUGE CHART AND INFO DISPLAY CODE ---
 
         //MOST SECURE AND MOST EXPOSED COUNTRIES
         function displayTopBottomCountries(allCountriesData) {
