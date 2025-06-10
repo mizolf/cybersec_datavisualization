@@ -73,7 +73,6 @@
             .attr("preserveAspectRatio", "xMidYMid meet");
         const mapTooltip = d3.select("#tooltip");
 
-        // Metric categories configuration
         const metricCategories = {
             cei: {
                 displayName: "Cybersecurity Exposure Index (CEI)",
@@ -125,12 +124,10 @@
             }
         };
 
-        // Global state
         let currentMapMetric = 'gci';
         let cyberDataStore = [];
         let dataByCountryStore = new Map();
 
-        // Map visualization setup
         const mapColorScale = d3.scaleThreshold();
         const nameMappings = {
             "United States of America": "United States",
@@ -165,12 +162,10 @@
             "Holy See": "Vatican City"
         };
 
-        // Map projection and path
         const mapProjection = d3.geoMercator();
         const mapPathGenerator = d3.geoPath().projection(mapProjection);
         const mapGroup = mapSvg.append("g").attr("id", "map-group");
 
-        // Zoom behavior
         const mapZoom = d3.zoom()
             .scaleExtent([1, 8])
             .on("zoom", (event) => {
@@ -179,7 +174,6 @@
 
         mapSvg.call(mapZoom);
 
-        // Zoom to specific country
         function zoomToCountry(countryPath) {
             const bounds = mapPathGenerator.bounds(countryPath);
             const dx = bounds[1][0] - bounds[0][0];
@@ -187,31 +181,26 @@
             const x = (bounds[0][0] + bounds[1][0]) / 2;
             const y = (bounds[0][1] + bounds[1][1]) / 2;
             
-            // Calculate appropriate scale with padding
             const scale = Math.min(8, 0.8 / Math.max(dx / mapWidth, dy / mapHeight));
             const translate = [mapWidth / 2 - scale * x, mapHeight / 2 - scale * y];
             
-            // Smooth zoom transition
             mapSvg.transition()
                 .duration(750)
                 .call(mapZoom.transform, d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale));
         }
 
-        // Reset zoom
         function resetZoom() {
             mapSvg.transition()
                 .duration(750)
                 .call(mapZoom.transform, d3.zoomIdentity);
         }
 
-        // Format metric value
         function formatMapMetricValue(metricKey, value) {
             if (value === null || isNaN(value)) return 'N/A';
             if (metricKey === 'cei' && (value < 10 || value === 0)) return value.toFixed(3);
             return value.toFixed(2);
         }
 
-        // Get category information
         function getMapCategoryInfo(metricKey, value) {
             if (value === null || isNaN(value)) return { label: 'N/A', color: '#e0e0e0' };
             
@@ -225,15 +214,12 @@
             return { label: L[L.length - 1], color: C[C.length - 1] };
         }
 
-        // Update map and legend
         function updateMapAndLegend(metricKey) {
             currentMapMetric = metricKey;
             const C = metricCategories[metricKey];
             
-            // Update color scale
             mapColorScale.domain(C.domain).range(C.range_colors);
             
-            // Update map colors
             mapGroup.selectAll("path.country")
                 .transition()
                 .duration(300)
@@ -248,7 +234,6 @@
                 })
                 .style("cursor", "pointer");
             
-            // Update legend header
             const lH = d3.select("#dynamic-legend-header");
             lH.html("");
             lH.append("div")
@@ -258,7 +243,6 @@
                 .attr("class", "legend-description")
                 .text(C.description);
             
-            // Update legend items
             const lI = d3.select("#dynamic-legend-items");
             lI.html("");
             C.range_colors.forEach((c, i) => {
@@ -269,9 +253,8 @@
                     .style("background-color", c);
                 item.append("span").text(L);
             });
-        }// --- END OF MAP CODE ---
+        }
 
-        // --- COUNTRY METRICS BAR CHART CODE WITH ANIMATIONS ---
         function drawCountryMetricsChart(countryData) {
             if (!countryData) { 
                 d3.select("#country-metrics-chart-container .chart-placeholder-text")
@@ -308,19 +291,17 @@
             
             chartSvg.attr("width", svgWidth).attr("height", svgHeight);
             
-            // Animation duration
             const animationDuration = 800;
             const staggerDelay = 100;
             
-            // Get or create main chart group
+
             let chartG = chartSvg.select("g.main-chart-group");
             if (chartG.empty()) {
                 chartG = chartSvg.append("g")
                     .attr("class", "main-chart-group")
                     .attr("transform", `translate(${margin.left},${margin.top})`);
             }
-            
-            // Add or update title
+
             let title = chartSvg.select(".metrics-chart-title");
             if (title.empty()) {
                 title = chartSvg.append("text")
@@ -336,7 +317,6 @@
                 .style("opacity", 1)
                 .text(`Cybersecurity Metrics for ${countryData.country}`);
             
-            // Setup scales
             const xScale = d3.scaleBand()
                 .domain(metricsData.map(d => d.label))
                 .range([0, chartWidth])
@@ -347,11 +327,9 @@
                 .domain([0, maxValue > 0 ? maxValue * 1.1 : 10])
                 .range([chartHeight, 0]);
             
-            // Create/update bars with smooth transition
             const bars = chartG.selectAll(".bar")
                 .data(metricsData, d => d.metric); 
             
-            // Enter new bars
             const barsEnter = bars.enter()
                 .append("rect")
                 .attr("class", "bar")
@@ -360,8 +338,7 @@
                 .attr("width", xScale.bandwidth())
                 .attr("height", 0)
                 .attr("fill", d => d.color);
-            
-            // Update existing bars + new bars
+
             const barsUpdate = barsEnter.merge(bars);
             
             barsUpdate.transition()
@@ -373,16 +350,14 @@
                 .attr("width", xScale.bandwidth())
                 .attr("height", d => chartHeight - yScale(d.value))
                 .attr("fill", d => d.color);
-            
-            // Remove bars that are no longer needed
+
             bars.exit()
                 .transition()
                 .duration(animationDuration / 2)
                 .attr("height", 0)
                 .attr("y", chartHeight)
                 .remove();
-            
-            // Add hover effects
+
             barsUpdate.on("mouseover", function(event, d) { 
                 d3.select(this)
                     .transition()
@@ -402,8 +377,7 @@
                     
                 mapTooltip.style("opacity", 0);
             });
-            
-            // Create/update value labels
+
             const valueLabels = chartG.selectAll(".bar-value-label")
                 .data(metricsData, d => d.metric);
             
@@ -430,8 +404,7 @@
                 .duration(animationDuration / 2)
                 .style("opacity", 0)
                 .remove();
-            
-            // Create/update axes
+
             let xAxis = chartG.select(".x-axis");
             if (xAxis.empty()) {
                 xAxis = chartG.append("g")
@@ -454,8 +427,7 @@
             yAxis.transition()
                 .duration(animationDuration)
                 .call(d3.axisLeft(yScale).ticks(5).tickFormat(d3.format(".2~f")));
-            
-            // Add/update y-axis label
+
             let yAxisLabel = chartSvg.select(".axis-label");
             if (yAxisLabel.empty()) {
                 yAxisLabel = chartSvg.append("text")
@@ -468,9 +440,7 @@
                     .text("Index Value");
             }
         }
-        // --- END OF COUNTRY METRICS BAR CHART CODE ---
 
-        // --- GAUGE CHART AND INFO DISPLAY CODE WITH ANIMATIONS ---
         function drawCountryGaugeChart(countryData) {
             const gaugeContainer = d3.select("#country-gauge-chart-container");
             const gaugeSvg = d3.select("#country-gauge-chart");
@@ -496,8 +466,7 @@
             const radius = Math.min(chartWidth / 2, chartHeight);
 
             gaugeSvg.attr("width", width).attr("height", height);
-            
-            // Get or create main group
+
             let g = gaugeSvg.select("g.main-gauge-group");
             if (g.empty()) {
                 g = gaugeSvg.append("g")
@@ -509,7 +478,6 @@
                     .attr("transform", `translate(${width / 2}, ${margin.top + radius})`);
             }
 
-            // Create/update gradient definition
             let defs = gaugeSvg.select("defs");
             if (defs.empty()) {
                 defs = gaugeSvg.append("defs");
@@ -544,7 +512,6 @@
                 .endAngle(Math.PI / 2)
                 .cornerRadius(3);
 
-            // Create/update gauge arc
             let gaugeArc = g.select(".gauge-arc");
             if (gaugeArc.empty()) {
                 gaugeArc = g.append("path")
@@ -552,14 +519,12 @@
                     .attr("d", arcGenerator)
                     .style("fill", "url(#gaugeGradient)")
                     .style("opacity", 0);
-                
-                // Animate arc appearance
+
                 gaugeArc.transition()
                     .duration(800)
                     .style("opacity", 1);
             }
 
-            // Needle animation setup
             const needleAngleScale = d3.scaleLinear()
                 .domain([0, 1])
                 .range([-Math.PI / 2, Math.PI / 2]);
@@ -567,19 +532,17 @@
             const targetNeedleAngle = needleAngleScale(ceiValue);
             const needleLength = radius * 0.85;
 
-            // Store current and target angles as data attributes
-            let currentNeedleAngle = -Math.PI / 2; // Default start position (secure)
+            let currentNeedleAngle = -Math.PI / 2; 
             const existingNeedle = g.select(".gauge-needle");
             if (!existingNeedle.empty() && existingNeedle.datum()) {
                 currentNeedleAngle = existingNeedle.datum();
             }
 
-            // Create/update needle
             let needle = g.select(".gauge-needle");
             if (needle.empty()) {
                 needle = g.append("line")
                     .attr("class", "gauge-needle")
-                    .datum(currentNeedleAngle) // Store angle as data
+                    .datum(currentNeedleAngle)
                     .attr("x1", 0)
                     .attr("y1", 0)
                     .attr("x2", Math.cos(currentNeedleAngle - Math.PI / 2) * needleLength)
@@ -589,15 +552,13 @@
                     .attr("stroke-linecap", "round")
                     .style("opacity", 0);
                 
-                // Fade in needle
                 needle.transition()
                     .duration(400)
                     .delay(600)
                     .style("opacity", 1);
             }
 
-            // Animate needle to new position using coordinate calculation
-            needle.datum(targetNeedleAngle) // Update stored angle
+            needle.datum(targetNeedleAngle)
                 .transition()
                 .duration(1200)
                 .delay(needle.style("opacity") == "0" ? 1000 : 200)
@@ -616,8 +577,7 @@
                         return Math.sin(angle - Math.PI / 2) * needleLength;
                     };
                 });
-            
-            // Create/update center circle
+
             let centerCircle = g.select(".gauge-center");
             if (centerCircle.empty()) {
                 centerCircle = g.append("circle")
@@ -626,8 +586,7 @@
                     .attr("cy", 0)
                     .attr("r", 0)
                     .style("fill", "black");
-                
-                // Animate center circle
+
                 centerCircle.transition()
                     .duration(600)
                     .delay(800)
@@ -635,7 +594,6 @@
                     .attr("r", 5);
             }
 
-            // Create/update labels
             let secureLabel = g.select(".gauge-label-secure");
             if (secureLabel.empty()) {
                 secureLabel = g.append("text")
@@ -666,7 +624,6 @@
                     .style("opacity", 1);
             }
 
-            // Create/update value display with animated counter
             let valueText = gaugeSvg.select(".gauge-value-text");
             if (valueText.empty()) {
                 valueText = gaugeSvg.append("text")
@@ -676,7 +633,6 @@
                     .style("opacity", 0);
             }
 
-            // Animate value counter
             const currentValue = valueText.datum() || 0;
             valueText.datum(ceiValue);
             
@@ -705,8 +661,7 @@
                 placeholder.text("Select a country to view information.").style("display", "block");
                 return;
             }
-            
-            // Animate country name
+
             let countryTitle = infoContainer.select("h3");
             if (countryTitle.empty()) {
                 countryTitle = infoContainer.append("h3")
@@ -717,8 +672,7 @@
                 .duration(500)
                 .style("opacity", 1)
                 .text(countryData.country);
-            
-            // Animate continent info
+
             let continentInfo = infoContainer.select(".continent-info");
             if (continentInfo.empty()) {
                 continentInfo = infoContainer.append("p")
@@ -731,8 +685,7 @@
                 .delay(200)
                 .style("opacity", 1)
                 .text(`Continent: ${countryData.region || 'N/A'}`);
-            
-            // Determine and animate status
+
             let statusText = "Status: N/A";
             let statusColor = "#666";
             
@@ -779,9 +732,7 @@
             const infoContainer = d3.select("#country-info-display");
             infoContainer.selectAll("h3, p:not(.chart-placeholder-text)").remove();
         }
-        // --- END OF GAUGE CHART AND INFO DISPLAY CODE ---
 
-        //MOST SECURE AND MOST EXPOSED COUNTRIES
         function displayTopBottomCountries(allCountriesData) {
             const safestListUl = d3.select("#safest-countries-list ul");
             const exposedListUl = d3.select("#most-exposed-countries-list ul");
@@ -820,8 +771,6 @@
             if (topExposed.length === 0) exposedListUl.append("li").text("Nema podataka.");
         }
 
-
-        // --- DATA LOADING AND INITIALIZATION ---
         Promise.all([
             d3.json("https://unpkg.com/world-atlas@2/countries-110m.json"),
             d3.csv("Cyber_security.csv", d_csv => { 
@@ -860,8 +809,7 @@
                         tooltipText += `<br><span class="tooltip-metric">${metricCategories[currentMapMetric].displayName}: ${formatMapMetricValue(currentMapMetric, metricValue)}</span>`;
                         tooltipText += `<br><span class="tooltip-category">Category: ${categoryInfo.label}</span>`;
                         tooltipText += `<br>Region: ${cD.region || 'N/A'}`;
-                        
-                        // Add other metrics as small text
+
                         for (const metricKey in metricCategories) {
                             if (metricKey !== currentMapMetric && cD[metricKey] !== null) {
                                 tooltipText += `<br><small>${metricCategories[metricKey].displayName}: ${formatMapMetricValue(metricKey, cD[metricKey])} (${getMapCategoryInfo(metricKey, cD[metricKey]).label})</small>`;
